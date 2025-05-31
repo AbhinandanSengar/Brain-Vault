@@ -6,9 +6,10 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
 import { z } from "zod";
-import { ContentModel, UserModel } from "./db";
+import { ContentModel, LinkModel, UserModel } from "./db";
 import { JWT_USER_PASSWORD } from "./config";
 import { userMiddleware } from "./middleware";
+import { hashGenerator } from "./utils";
 
 const PORT = 3000;
 
@@ -202,13 +203,83 @@ app.delete("/api/v1/content/:contentId", userMiddleware, async (req, res) => {
     }
 });
 
-// app.post("/api/v1/brain/share", (req, res) => {
-    
-// });
+app.post("/api/v1/brain/share", userMiddleware, async (req, res) => {
+    //@ts-ignore
+    const userId = req.userId;
+    const share = req.body.share;
 
-// app.get("/api/v1/brain/:shareLink", (req, res) => {
+    try {
+        if(share) {
+            const existingLink = await LinkModel.findOne({ userId });
+            if(existingLink) {
+                return res.status(200).json({
+                    link: "/share/" + existingLink.hash,
+                    message: "Shareable link already exists"
+                });
+            }
 
-// });
+            const hash = hashGenerator(15);
+            const newLink = await LinkModel.create({ userId, hash });
+
+            return res.status(200).json({
+                link: "/share/" + newLink.hash,
+                message: "Shareable link created"
+            });
+        } else {
+            await LinkModel.deleteOne({ userId });
+            return res.status(200).json({
+                message: "Shareable link removed"
+            });
+        }
+    } catch(error) {
+        if(error instanceof Error) {
+            console.log("Shareable link generate error: ", error.message);
+            res.status(500).json({
+                message: "Internal server error"
+            });
+        }
+    }
+});
+
+app.get("/api/v1/brain/:shareLink", async (req, res) => {
+    const hash = req.params.shareLink;
+
+    try {
+        const link = await LinkModel.findOne({ hash });
+        if(!link) {
+            return res.status(400).json({
+                message: "Expired or Invalid link"
+            });
+        }
+
+        const user = await UserModel.findOne({
+            _id: link.userId
+        });
+        if(!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        const content = await ContentModel.find({
+            userId: link.userId
+        });
+
+        res.status(200).json({
+            message: "Contents fetched successfully",
+            username: user.username,
+            content: content
+        })
+
+    } catch(error) {
+        if(error instanceof Error) {
+            console.log("Content share error: ", error.message);
+            res.status(500).json({
+                message: "Internal server error"
+            });
+        }
+    }
+});
 
 async function main() {
     await mongoose.connect(process.env.MONGODB_URL || "");

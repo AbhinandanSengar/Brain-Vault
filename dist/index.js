@@ -22,6 +22,7 @@ const zod_1 = require("zod");
 const db_1 = require("./db");
 const config_1 = require("./config");
 const middleware_1 = require("./middleware");
+const utils_1 = require("./utils");
 const PORT = 3000;
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
@@ -191,10 +192,77 @@ app.delete("/api/v1/content/:contentId", middleware_1.userMiddleware, (req, res)
         }
     }
 }));
-// app.post("/api/v1/brain/share", (req, res) => {
-// });
-// app.get("/api/v1/brain/:shareLink", (req, res) => {
-// });
+app.post("/api/v1/brain/share", middleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    //@ts-ignore
+    const userId = req.userId;
+    const share = req.body.share;
+    try {
+        if (share) {
+            const existingLink = yield db_1.LinkModel.findOne({ userId });
+            if (existingLink) {
+                return res.status(200).json({
+                    link: "/share" + existingLink.hash,
+                    message: "Shareable link already exists"
+                });
+            }
+            const hash = (0, utils_1.hashGenerator)(15);
+            const newLink = yield db_1.LinkModel.create({ userId, hash });
+            return res.status(200).json({
+                link: "/share/" + newLink.hash,
+                message: "Shareable link created"
+            });
+        }
+        else {
+            yield db_1.LinkModel.deleteOne({ userId });
+            return res.status(200).json({
+                message: "Shareable link removed"
+            });
+        }
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            console.log("Shareable link generate error: ", error.message);
+            res.status(500).json({
+                message: "Internal server error"
+            });
+        }
+    }
+}));
+app.get("/api/v1/brain/:shareLink", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const hash = req.params.shareLink;
+    try {
+        const link = yield db_1.LinkModel.findOne({ hash });
+        if (!link) {
+            return res.status(400).json({
+                message: "Expired or Invalid link"
+            });
+        }
+        const user = yield db_1.UserModel.findOne({
+            _id: link.userId
+        });
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+        const content = yield db_1.ContentModel.find({
+            userId: link.userId
+        });
+        res.status(200).json({
+            message: "Contents fetched successfully",
+            username: user.username,
+            content: content
+        });
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            console.log("Content share error: ", error.message);
+            res.status(500).json({
+                message: "Internal server error"
+            });
+        }
+    }
+}));
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         yield mongoose_1.default.connect(process.env.MONGODB_URL || "");
