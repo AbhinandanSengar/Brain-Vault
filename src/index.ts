@@ -155,7 +155,7 @@ app.get("/api/v1/content", userMiddleware, async (req, res) => {
     const userId = req.userId;
 
     try {
-        const contents = await ContentModel.find({ userId });
+        const contents = await ContentModel.find({ userId }).populate("userId", "username");
 
         res.status(200).json({
             message: "Contents displayed successfully",

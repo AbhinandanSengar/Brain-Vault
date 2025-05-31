@@ -16,5 +16,5 @@ const ContentSchema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true }
 });
 
-export const UserModel = model("user", UserSchema);
-export const ContentModel = model("content", ContentSchema);
+export const UserModel = model("User", UserSchema);
+export const ContentModel = model("Content", ContentSchema);

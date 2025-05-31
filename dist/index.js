@@ -148,7 +148,7 @@ app.get("/api/v1/content", middleware_1.userMiddleware, (req, res) => __awaiter(
     //@ts-ignore
     const userId = req.userId;
     try {
-        const contents = yield db_1.ContentModel.find({ userId });
+        const contents = yield db_1.ContentModel.find({ userId }).populate("userId", "username");
         res.status(200).json({
             message: "Contents displayed successfully",
             Contents: contents

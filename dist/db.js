@@ -19,5 +19,5 @@ const ContentSchema = new mongoose_2.Schema({
     tags: [{ type: mongoose_2.Schema.Types.ObjectId, ref: "Tag" }],
     userId: { type: mongoose_2.Schema.Types.ObjectId, ref: "User", required: true }
 });
-exports.UserModel = (0, mongoose_2.model)("user", UserSchema);
-exports.ContentModel = (0, mongoose_2.model)("content", ContentSchema);
+exports.UserModel = (0, mongoose_2.model)("User", UserSchema);
+exports.ContentModel = (0, mongoose_2.model)("Content", ContentSchema);
