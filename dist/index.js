@@ -201,7 +201,7 @@ app.post("/api/v1/brain/share", middleware_1.userMiddleware, (req, res) => __awa
             const existingLink = yield db_1.LinkModel.findOne({ userId });
             if (existingLink) {
                 return res.status(200).json({
-                    link: "/share" + existingLink.hash,
+                    link: "/share/" + existingLink.hash,
                     message: "Shareable link already exists"
                 });
             }
