@@ -6,8 +6,9 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
 import { z } from "zod";
-import { UserModel } from "./db";
+import { ContentModel, UserModel } from "./db";
 import { JWT_USER_PASSWORD } from "./config";
+import { userMiddleware } from "./middleware";
 
 const PORT = 3000;
 
@@ -24,7 +25,7 @@ app.post("/api/v1/signup", async (req, res) => {
     });
 
     const signUpData = signUpSchema.safeParse(req.body);
-    if(!signUpData.success) {
+    if (!signUpData.success) {
         return res.status(411).send({
             message: "Invalid format",
             error: signUpData.error
@@ -35,7 +36,7 @@ app.post("/api/v1/signup", async (req, res) => {
 
     try {
         const existingUser = await UserModel.findOne({ username });
-        if(existingUser) {
+        if (existingUser) {
             return res.status(403).json({
                 message: "User already exists. Please Login"
             });
@@ -43,15 +44,15 @@ app.post("/api/v1/signup", async (req, res) => {
 
         const hashPassword = await bcrypt.hash(password, 10);
 
-        const newUser = await UserModel.create({ name, username, password: hashPassword});
+        const newUser = await UserModel.create({ name, username, password: hashPassword });
 
         res.status(200).json({
             message: "Signed up successfully",
             user: newUser
         });
-    } catch(error: unknown) {
-        if(error instanceof Error){
-            console.error("Something went Wrong: ", error.message);
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            console.error("Signup error: ", error.message);
         }
         res.status(500).json({
             message: "Internal server error",
@@ -68,25 +69,25 @@ app.post("/api/v1/signin", async (req, res) => {
     });
 
     const signInData = signInSchema.safeParse(req.body);
-    if(!signInData.success) {
+    if (!signInData.success) {
         return res.status(411).send({
             message: "Invalid format",
             error: signInData.error
         });
     }
 
-    const { username, password } = signInData.data; 
+    const { username, password } = signInData.data;
 
     try {
         const signedUser = await UserModel.findOne({ username });
-        if(!signedUser) {
+        if (!signedUser) {
             return res.status(403).json({
                 message: "Incorrect username"
             });
         }
 
         const passwordMatch = await bcrypt.compare(password, signedUser.password);
-        if(!passwordMatch) {
+        if (!passwordMatch) {
             return res.status(403).json({
                 message: "Incorrect password"
             });
@@ -98,9 +99,9 @@ app.post("/api/v1/signin", async (req, res) => {
             message: "Signed In successfully",
             token: token
         });
-    } catch(error: unknown) {
-        if(error instanceof Error) {
-            console.log("Something went wrong: ", error.message);
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            console.error("Signin error: ", error.message);
             res.status(500).json({
                 message: "Internal server error"
             });
@@ -108,24 +109,105 @@ app.post("/api/v1/signin", async (req, res) => {
     }
 });
 
-// app.post("/api/v1/content", (req, res) => {
-     
-// });
+app.post("/api/v1/content", userMiddleware, async (req, res) => {
+    const contentBody = z.object({
+        link: z.string(),
+        type: z.enum(["document", "tweet", "youtube", "link"]),
+        title: z.string().min(1, { message: "Title cannot be empty" })
+    });
 
-// app.get("/api/v1/content", (req, res) => {
-     
-// });
+    const contentData = contentBody.safeParse(req.body);
+    if (!contentData.success) {
+        return res.status(411).send({
+            message: "Invalid format",
+            error: contentData.error
+        });
+    }
 
-// app.delete("/api/v1/content", (req, res) => {
-     
-// });
+    const { link, type, title } = contentData.data;
+
+    try {
+        const content = await ContentModel.create({
+            link,
+            type,
+            title,
+            //@ts-ignore
+            userId: req.userId,
+            tags: []
+        });
+        
+        res.status(200).json({
+            message: "Content addded successfully",
+            Content: content
+        });
+    } catch(error: unknown) {
+        if(error instanceof Error) {
+            console.error("Content addition error: ", error.message);
+            res.status(500).json({
+                message: "Internal Server erorr"
+            });
+        }
+    }
+});
+
+app.get("/api/v1/content", userMiddleware, async (req, res) => {
+    //@ts-ignore
+    const userId = req.userId;
+
+    try {
+        const contents = await ContentModel.find({ userId });
+
+        res.status(200).json({
+            message: "Contents displayed successfully",
+            Contents : contents
+        });
+    } catch(error: unknown) {
+        if(error instanceof Error) {
+            console.error("Content display error: ", error.message);
+        }
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+});
+
+app.delete("/api/v1/content/:contentId", userMiddleware, async (req, res) => {
+    //@ts-ignore
+    const userId = req.userId;
+    const contentId = req.params.contentId;
+
+    try {
+        const deleteContent = await ContentModel.findOneAndDelete({
+            _id: contentId,
+            userId
+        });
+
+        if(!deleteContent) {
+            return res.status(404).json({
+                message: "Content not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Content deleted successfully",
+            Content: deleteContent
+        });
+    } catch(error) {
+        if(error instanceof Error) {
+            console.log("Content delete error: ", error.message);
+            res.status(500).json({
+                message: "Internal server error"
+            });
+        }
+    }
+});
 
 // app.post("/api/v1/brain/share", (req, res) => {
-     
+    
 // });
 
 // app.get("/api/v1/brain/:shareLink", (req, res) => {
-     
+
 // });
 
 async function main() {

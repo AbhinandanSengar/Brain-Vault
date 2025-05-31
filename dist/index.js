@@ -21,6 +21,7 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const zod_1 = require("zod");
 const db_1 = require("./db");
 const config_1 = require("./config");
+const middleware_1 = require("./middleware");
 const PORT = 3000;
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
@@ -56,7 +57,7 @@ app.post("/api/v1/signup", (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         if (error instanceof Error) {
-            console.error("Something went Wrong: ", error.message);
+            console.error("Signup error: ", error.message);
         }
         res.status(500).json({
             message: "Internal server error",
@@ -99,19 +100,97 @@ app.post("/api/v1/signin", (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         if (error instanceof Error) {
-            console.log("Something went wrong: ", error.message);
+            console.error("Signin error: ", error.message);
             res.status(500).json({
                 message: "Internal server error"
             });
         }
     }
 }));
-// app.post("/api/v1/content", (req, res) => {
-// });
-// app.get("/api/v1/content", (req, res) => {
-// });
-// app.delete("/api/v1/content", (req, res) => {
-// });
+app.post("/api/v1/content", middleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const contentBody = zod_1.z.object({
+        link: zod_1.z.string(),
+        type: zod_1.z.enum(["document", "tweet", "youtube", "link"]),
+        title: zod_1.z.string().min(1, { message: "Title cannot be empty" })
+    });
+    const contentData = contentBody.safeParse(req.body);
+    if (!contentData.success) {
+        return res.status(411).send({
+            message: "Invalid format",
+            error: contentData.error
+        });
+    }
+    const { link, type, title } = contentData.data;
+    try {
+        const content = yield db_1.ContentModel.create({
+            link,
+            type,
+            title,
+            //@ts-ignore
+            userId: req.userId,
+            tags: []
+        });
+        res.status(200).json({
+            message: "Content addded successfully",
+            Content: content
+        });
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            console.error("Content addition error: ", error.message);
+            res.status(500).json({
+                message: "Internal Server erorr"
+            });
+        }
+    }
+}));
+app.get("/api/v1/content", middleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    //@ts-ignore
+    const userId = req.userId;
+    try {
+        const contents = yield db_1.ContentModel.find({ userId });
+        res.status(200).json({
+            message: "Contents displayed successfully",
+            Contents: contents
+        });
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            console.error("Content display error: ", error.message);
+        }
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+}));
+app.delete("/api/v1/content/:contentId", middleware_1.userMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    //@ts-ignore
+    const userId = req.userId;
+    const contentId = req.params.contentId;
+    try {
+        const deleteContent = yield db_1.ContentModel.findOneAndDelete({
+            _id: contentId,
+            userId
+        });
+        if (!deleteContent) {
+            return res.status(404).json({
+                message: "Content not found"
+            });
+        }
+        res.status(200).json({
+            message: "Content deleted successfully",
+            Content: deleteContent
+        });
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            console.log("Content delete error: ", error.message);
+            res.status(500).json({
+                message: "Internal server error"
+            });
+        }
+    }
+}));
 // app.post("/api/v1/brain/share", (req, res) => {
 // });
 // app.get("/api/v1/brain/:shareLink", (req, res) => {
