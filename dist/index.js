@@ -18,6 +18,7 @@ const express_1 = __importDefault(require("express"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
+const cors_1 = __importDefault(require("cors"));
 const zod_1 = require("zod");
 const db_1 = require("./db");
 const config_1 = require("./config");
@@ -26,6 +27,7 @@ const utils_1 = require("./utils");
 const PORT = 3000;
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
+app.use((0, cors_1.default)());
 app.post("/api/v1/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const signUpSchema = zod_1.z.object({
         name: zod_1.z.string(),
