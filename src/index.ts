@@ -215,7 +215,7 @@ app.post("/api/v1/brain/share", userMiddleware, async (req, res) => {
             const existingLink = await LinkModel.findOne({ userId });
             if(existingLink) {
                 return res.status(200).json({
-                    link: "/share/" + existingLink.hash,
+                    link: existingLink.hash,
                     message: "Shareable link already exists"
                 });
             }
@@ -224,7 +224,7 @@ app.post("/api/v1/brain/share", userMiddleware, async (req, res) => {
             const newLink = await LinkModel.create({ userId, hash });
 
             return res.status(200).json({
-                link: "/share/" + newLink.hash,
+                link: newLink.hash,
                 message: "Shareable link created"
             });
         } else {
