@@ -247,13 +247,13 @@ app.get("/api/v1/brain/:shareLink", (req, res) => __awaiter(void 0, void 0, void
                 message: "User not found"
             });
         }
-        const content = yield db_1.ContentModel.find({
+        const contents = yield db_1.ContentModel.find({
             userId: link.userId
         });
         res.status(200).json({
             message: "Contents fetched successfully",
             username: user.username,
-            content: content
+            contents: contents
         });
     }
     catch (error) {

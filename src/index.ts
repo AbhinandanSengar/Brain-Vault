@@ -263,14 +263,14 @@ app.get("/api/v1/brain/:shareLink", async (req, res) => {
             });
         }
 
-        const content = await ContentModel.find({
+        const contents = await ContentModel.find({
             userId: link.userId
         });
 
         res.status(200).json({
             message: "Contents fetched successfully",
             username: user.username,
-            content: content
+            contents: contents
         })
 
     } catch(error) {
